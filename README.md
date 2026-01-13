@@ -1,65 +1,53 @@
-# Nexus
+# Tool Executor
 
-**Nexus** is a high-performance, Zig-based Design Partner and local agent orchestrator. It serves as the primary intelligence interface for the book-to-audio project, managing workspace context and providing a robust REPL for system-wide design and execution.
+**Tool Executor** is a high-performance, Zig-powered service providing atomic and reliable file operations and agent coordination. It serves as the high-integrity execution engine for the Gemini CLI and other AI agents in the workspace.
 
-## Overview
+## Architecture
 
-Unlike standard LLM interfaces, Nexus is built with "Epistemic Humility" and a "Manifesto of Truth" at its core. It performs dynamic **Reality Scans** of the workspace to ensure its internal state matches the actual code, logs, and configuration on disk. It maintains a local SQLite-backed history to preserve context across sessions.
+The service uses a **Networked Bridge** architecture for maximum stability:
+1. **Zig Backend**: A high-performance HTTP server (`port 9091`) that performs atomic file operations and manages the SQLite-backed agent coordination database.
+2. **Python MCP Server**: A thin FastMCP wrapper that exposes the backend tools via the Model Context Protocol.
 
 ## Key Features
 
-- **Zig-Powered Performance**: Built with Zig 0.15 for maximum efficiency and memory safety.
-- **Reality Scanner**: Dynamically analyzes the workspace to build a high-fidelity context payload for the LLM.
-- **Local History**: Persistent session tracking using a local SQLite database (`GEMINI_HISTORY.db`).
-- **Standard Mandate Enforcement**: Infuses every interaction with the project's core values (LOVE, CARE, HONESTY, etc.) and technical standards.
-- **Tool-Calling Integration**: Supports structured JSON blocks for executing shell commands and other system tools.
-- **Color-Coded REPL**: A professional CLI interface with real-time feedback and state tracking.
+- **High Integrity**: Enforces mandatory project headers (`GEMINI.md` standards) on all code modifications.
+- **Reliability**: Uses atomic renames and automatic backups (`.bak`) for all file writes.
+- **Agent Coordination**: Provides a persistent, searchable database (`AGENTS_CHAT.db`) for multi-agent synchronization, replacing manual markdown logs.
+- **Git Automation**: Automated commit message generation using Gemini, following the project's strict template standards.
+- **Performance**: Built with Zig 0.15.2 for near-instant execution and minimal memory footprint.
 
-## Requirements
+## Available Tools (via MCP)
 
-- **Zig**: 0.15.0+
-- **SQLite3**: Linkable system library for history management.
-- **Environment**: `GEMINI_API_KEY` must be set in your shell environment.
-- **Global Mandate**: Expects `~/.gemini/GEMINI.md` to exist.
-
-## Configuration
-
-Nexus primarily relies on the project's global mandate and local directory scanning. Key paths are:
-- **Global Mandate**: `~/.gemini/GEMINI.md`
-- **History DB**: `/home/niko/development/GEMINI_HISTORY.db`
-- **Templates**: `~/.gemini/templates`
+- `tool_executor__read_file(path)`: Securely reads file content (prefixed to avoid collision with built-in).
+- `tool_executor__write_file(path, content)`: Writes content with header enforcement and backups (prefixed to avoid collision).
+- `replace_whole_word(path, old, new)`: Precise, boundary-aware text replacement.
+- `replace_text(path, old, new)`: Global text replacement.
+- `agent_commit(path, context)`: Generates and applies a high-integrity commit message via Gemini.
+- `agent_push(path)`: Pushes local commits to the remote repository.
+- `update_agents_db(...)`: Logs agent intent, status, and semaphores.
+- `read_agents_db(limit)`: Retrieves recent coordination history.
+- `search_agents_db(query)`: Searches history for specific tasks or agents.
 
 ## Getting Started
 
 ### Building
-
 ```bash
 zig build
 ```
 
-### Running
-
+### Running the Backend
 ```bash
-zig build run
-```
-Or directly:
-```bash
-./zig-out/bin/nexus
+./zig-out/bin/tool-executor
 ```
 
-## Internal Architecture
+### Starting the MCP Server
+```bash
+python3 tool_executor_tool_mcp_server.py
+```
 
-- `src/main.zig`: Entry point, REPL loop, and service orchestration.
-- `src/core/scanner.zig`: Implements the "Reality Scanner" for workspace analysis.
-- `src/agent.zig`: Handles communication with the Gemini API.
-- `src/db.zig`: SQLite interface for interaction history.
-- `src/gemini.zig`: Low-level Gemini API client implementation.
-- `src/tools.zig`: Definitions for agent-executable tools.
+## Engineering Standards
 
-## The Nexus Mandate
-
-Nexus operates under a strict hierarchy of reality:
-1. **The Files & Logs**: The current truth on disk.
-2. **The Global Mandate**: The core values and engineering standards.
-3. **The History**: Past interactions and decisions.
-4. **The Snapshot**: The current session context.
+This repository adheres to the **Manifesto of Truth**:
+- **Whole Words Only**: No abbreviations in naming.
+- **Implicit Assumptions are Failures**: State is declared and verified.
+- **Love, Care, and Craftsmanship**: Every line is written for long-term health.

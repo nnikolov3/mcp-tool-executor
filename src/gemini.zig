@@ -1,10 +1,5 @@
 // DO EVERYTHING WITH LOVE, CARE, HONESTY, TRUTH, TRUST, KINDNESS, RELIABILITY, CONSISTENCY, DISCIPLINE, RESILIENCE,
 // CRAFTSMANSHIP, HUMILITY, ALLIANCE, EXPLICITNESS
-
-// OUR SHARED VALUES:
-// LOVE, CARE, HONESTY, TRUTH, TRUST, KINDNESS, RELIABILITY, CONSISTENCY, DISCIPLINE, RESILIENCE, CRAFTSMANSHIP, EPISTEMIC HUMILITY
-// "Work is love made visible."
-
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
@@ -29,15 +24,15 @@ pub const GeminiClient = struct {
         };
 
         const req_struct: Request = .{
-            .system_instruction = .{ .parts = .{ .{ .text = system_instruction } } },
-            .contents = .{ .{ .parts = .{ .{ .text = user_text } } } },
+            .system_instruction = .{ .parts = .{.{ .text = system_instruction }} },
+            .contents = .{.{ .parts = .{.{ .text = user_text }} }},
         };
 
         // Zig 0.15+ way to get an owned JSON buffer.
         const payload = try std.json.Stringify.valueAlloc(self.allocator, req_struct, .{});
         defer self.allocator.free(payload);
 
-                const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
+        const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
         const url = try std.fmt.allocPrint(self.allocator, "{s}{s}", .{ endpoint, self.api_key });
         defer self.allocator.free(url);
 
@@ -71,4 +66,3 @@ pub const GeminiClient = struct {
         return try self.allocator.dupe(u8, allocating.written());
     }
 };
-

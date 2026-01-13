@@ -1,0 +1,17 @@
+[Unit]
+Description=High-Integrity Tool Executor Service (Zig)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/lib/tool-executor
+EnvironmentFile=/etc/tool-executor.env
+ExecStart=/usr/local/bin/tool-executor
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
