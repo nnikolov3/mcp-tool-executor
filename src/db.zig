@@ -30,7 +30,9 @@ pub const Database = struct {
 
     pub fn init(allocator: Allocator, path: []const u8) !Database {
         var handle: ?*c.sqlite3 = null;
-        const result_code = c.sqlite3_open(path.ptr, &handle);
+        const path_z = try allocator.dupeZ(u8, path);
+        defer allocator.free(path_z);
+        const result_code = c.sqlite3_open(path_z.ptr, &handle);
         if (result_code != c.SQLITE_OK) {
             return error.SqliteOpenFailed;
         }

@@ -56,13 +56,14 @@ pub const GeminiClient = struct {
         });
 
         if (resp.status != .ok) {
-            // Copy out body for debugging (still return an error after printing).
-            const err_body = allocating.written();
-            std.debug.print("Gemini API HTTP status: {d}\nBody: {s}\n", .{ resp.status, err_body });
+            // Copy out body for debugging
+            const error_body = try self.allocator.dupe(u8, allocating.written());
+            defer self.allocator.free(error_body);
+            std.debug.print("[GEMINI] API Error Status: {d}\n[GEMINI] Response: {s}\n", .{ resp.status, error_body });
             return error.ApiError;
         }
 
-        // Return an owned copy to the caller (since allocating.deinit() frees its buffer).
+        std.debug.print("[GEMINI] Prompt successful.\n", .{});
         return try self.allocator.dupe(u8, allocating.written());
     }
 };
