@@ -85,6 +85,8 @@ fn handleRequest(allocator: std.mem.Allocator, database: *db.Database, gemini_cl
         try handleFindFiles(allocator, &request, body);
     } else if (std.mem.eql(u8, path, "/search-text")) {
         try handleSearchText(allocator, &request, body);
+    } else if (std.mem.eql(u8, path, "/clean-backups")) {
+        try handleCleanBackups(allocator, &request, body);
     } else if (std.mem.eql(u8, path, "/write")) {
         try handleWrite(allocator, &request, body);
     } else if (std.mem.eql(u8, path, "/replace-word")) {
@@ -191,6 +193,30 @@ fn handleSearchText(allocator: std.mem.Allocator, request: *std.http.Server.Requ
     }
 
     const response_json = try std.json.Stringify.valueAlloc(allocator, results, .{});
+    defer allocator.free(response_json);
+
+    try sendResponse(request, .ok, response_json);
+}
+
+fn handleCleanBackups(allocator: std.mem.Allocator, request: *std.http.Server.Request, body: []const u8) !void {
+    const payload_result = std.json.parseFromSlice(struct { path: []const u8 }, allocator, body, .{}) catch {
+        log("Error parsing JSON payload in handleCleanBackups: {s}\n", .{body});
+        try sendResponse(request, .bad_request, "{{ \"error\": \"Invalid JSON payload\" }}");
+        return;
+    };
+    defer payload_result.deinit();
+
+    log("Attempting to clean backups in {s}\n", .{payload_result.value.path});
+
+    const count = tools.cleanBackups(allocator, payload_result.value.path) catch |err| {
+        log("Error from tools.cleanBackups: {any}\n", .{err});
+        const error_message = try std.fmt.allocPrint(allocator, "{{ \"error\": \"Error cleaning backups: {any}\" }}", .{err});
+        defer allocator.free(error_message);
+        try sendResponse(request, .internal_server_error, error_message);
+        return;
+    };
+
+    const response_json = try std.fmt.allocPrint(allocator, "{{ \"status\": \"success\", \"deleted_count\": {d} }}", .{count});
     defer allocator.free(response_json);
 
     try sendResponse(request, .ok, response_json);

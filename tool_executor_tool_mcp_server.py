@@ -29,6 +29,30 @@ def _post(path: str, data: Dict[str, Any]) -> str:
 
 @mcp.tool()
 
+def clean_backups(path: str) -> str:
+
+    """Recursively deletes all .bak files starting from a directory.
+
+
+
+    Args:
+
+        path: The absolute path to the directory to start cleaning from.
+
+
+
+    Returns:
+
+        A JSON string containing the status and the count of deleted files.
+
+    """
+
+    return _post("/clean-backups", {"path": os.path.abspath(path)})
+
+
+
+@mcp.tool()
+
 def search_text(path: str, pattern: str) -> str:
 
     """Recursively searches for a text pattern in file contents.

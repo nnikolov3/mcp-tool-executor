@@ -176,10 +176,10 @@ pub fn searchText(allocator: Allocator, path: []const u8, pattern: []const u8) !
             const file = entry.dir.openFile(entry.basename, .{}) catch continue;
             defer file.close();
             
-            const file_size = file.getEndPos() catch continue;
-            const buffer = allocator.alloc(u8, file_size) catch continue;
+            const file_size = try file.getEndPos();
+            const buffer = try allocator.alloc(u8, file_size);
             defer allocator.free(buffer);
-            _ = file.readAll(buffer) catch continue;
+            _ = try file.readAll(buffer);
 
             if (memory.indexOf(u8, buffer, pattern) != null) {
                 try results.append(allocator, try allocator.dupe(u8, entry.path));
@@ -187,4 +187,21 @@ pub fn searchText(allocator: Allocator, path: []const u8, pattern: []const u8) !
         }
     }
     return try results.toOwnedSlice(allocator);
+}
+
+pub fn cleanBackups(allocator: Allocator, path: []const u8) !usize {
+    var dir = try filesystem.openDirAbsolute(path, .{ .iterate = true });
+    defer dir.close();
+
+    var walker = try dir.walk(allocator);
+    defer walker.deinit();
+
+    var count: usize = 0;
+    while (try walker.next()) |entry| {
+        if (entry.kind == .file and memory.endsWith(u8, entry.basename, ".bak")) {
+            entry.dir.deleteFile(entry.basename) catch continue;
+            count += 1;
+        }
+    }
+    return count;
 }
