@@ -1,3 +1,4 @@
+
 // DO EVERYTHING WITH LOVE, CARE, HONESTY, TRUTH, TRUST, KINDNESS, RELIABILITY, CONSISTENCY, DISCIPLINE, RESILIENCE, CRAFTSMANSHIP, HUMILITY, ALLIANCE, EXPLICITNESS
 
 const std = @import("std");
@@ -97,6 +98,8 @@ fn handleRequest(allocator: std.mem.Allocator, database: *db.Database, gemini_cl
         try handleAgentsUpdate(allocator, database, &request, body);
     } else if (std.mem.eql(u8, path, "/agents/read")) {
         try handleAgentsRead(allocator, database, &request, body);
+    } else if (std.mem.eql(u8, path, "/agents/peek")) {
+        try handleAgentsPeek(allocator, database, &request, body);
     } else if (std.mem.eql(u8, path, "/agents/search")) {
         try handleAgentsSearch(allocator, database, &request, body);
     } else if (std.mem.eql(u8, path, "/git/commit")) {
@@ -344,7 +347,6 @@ fn handleAgentsRead(allocator: std.mem.Allocator, database: *db.Database, reques
 
     try sendResponse(request, .ok, response_json);
 }
-
 fn handleAgentsSearch(allocator: std.mem.Allocator, database: *db.Database, request: *std.http.Server.Request, body: []const u8) !void {
     const payload_result = std.json.parseFromSlice(
         struct { query: []const u8, limit: usize },
@@ -359,6 +361,25 @@ fn handleAgentsSearch(allocator: std.mem.Allocator, database: *db.Database, requ
 
     const chats = database.searchChats(payload_result.value.query, payload_result.value.limit) catch |err| {
         const error_message = try std.fmt.allocPrint(allocator, "{{ \"error\": \"Error searching agents DB: {any}\" }}", .{err});
+        defer allocator.free(error_message);
+        try sendResponse(request, .internal_server_error, error_message);
+        return;
+    };
+    defer {
+        for (chats) |chat| chat.deinit(allocator);
+        allocator.free(chats);
+    }
+
+    const response_json = try std.json.Stringify.valueAlloc(allocator, chats, .{});
+    defer allocator.free(response_json);
+
+    try sendResponse(request, .ok, response_json);
+}
+
+fn handleAgentsPeek(allocator: std.mem.Allocator, database: *db.Database, request: *std.http.Server.Request, body: []const u8) !void {
+    _ = body;
+    const chats = database.getRecentChats(5) catch |err| {
+        const error_message = try std.fmt.allocPrint(allocator, "{{ \"error\": \"Error reading agents DB: {any}\" }}", .{err});
         defer allocator.free(error_message);
         try sendResponse(request, .internal_server_error, error_message);
         return;

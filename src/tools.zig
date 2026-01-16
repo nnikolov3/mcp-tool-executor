@@ -1,3 +1,4 @@
+
 // DO EVERYTHING WITH LOVE, CARE, HONESTY, TRUTH, TRUST, KINDNESS, RELIABILITY, CONSISTENCY, DISCIPLINE, RESILIENCE, CRAFTSMANSHIP, HUMILITY, ALLIANCE, EXPLICITNESS
 
 const std = @import("std");
@@ -48,14 +49,18 @@ pub fn writeFileWithBackup(allocator: Allocator, path: []const u8, content: []co
     var final_content: []const u8 = content;
 
     const is_go_js_ts = memory.eql(u8, extension, ".go") or memory.eql(u8, extension, ".js") or memory.eql(u8, extension, ".ts");
-    const is_py_shell_toml_zig = memory.eql(u8, extension, ".py") or memory.eql(u8, extension, ".sh") or memory.eql(u8, extension, ".toml") or memory.eql(u8, extension, ".zig");
+    const is_py_shell_toml = memory.eql(u8, extension, ".py") or memory.eql(u8, extension, ".sh") or memory.eql(u8, extension, ".toml");
+    const is_zig = memory.eql(u8, extension, ".zig");
 
     var header_buffer: []const u8 = "";
     if (is_go_js_ts and !memory.startsWith(u8, content, "/* DO EVERYTHING WITH LOVE")) {
         header_buffer = try std.fmt.allocPrint(allocator, "/* DO EVERYTHING WITH LOVE, CARE, HONESTY, TRUTH, TRUST, KINDNESS, RELIABILITY, CONSISTENCY, DISCIPLINE, RESILIENCE, CRAFTSMANSHIP, HUMILITY, ALLIANCE, EXPLICITNESS */\n\n", .{});
         final_content = try std.mem.concat(allocator, u8, &.{ header_buffer, content });
-    } else if (is_py_shell_toml_zig and !memory.startsWith(u8, content, "# DO EVERYTHING WITH LOVE")) {
+    } else if (is_py_shell_toml and !memory.startsWith(u8, content, "# DO EVERYTHING WITH LOVE")) {
         header_buffer = try std.fmt.allocPrint(allocator, "# DO EVERYTHING WITH LOVE, CARE, HONESTY, TRUTH, TRUST, KINDNESS, RELIABILITY, CONSISTENCY, DISCIPLINE, RESILIENCE, CRAFTSMANSHIP, HUMILITY, ALLIANCE, EXPLICITNESS\n\n", .{});
+        final_content = try std.mem.concat(allocator, u8, &.{ header_buffer, content });
+    } else if (is_zig and !memory.startsWith(u8, content, "// DO EVERYTHING WITH LOVE")) {
+        header_buffer = try std.fmt.allocPrint(allocator, "// DO EVERYTHING WITH LOVE, CARE, HONESTY, TRUTH, TRUST, KINDNESS, RELIABILITY, CONSISTENCY, DISCIPLINE, RESILIENCE, CRAFTSMANSHIP, HUMILITY, ALLIANCE, EXPLICITNESS\n\n", .{});
         final_content = try std.mem.concat(allocator, u8, &.{ header_buffer, content });
     }
     defer if (header_buffer.len > 0) allocator.free(header_buffer);

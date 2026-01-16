@@ -296,6 +296,21 @@ def read_agents_db(limit: int = 20) -> str:
 
 
 @mcp.tool()
+def peek_agents_db() -> str:
+    """Peeks at the 5 most recent entries from the Agent Coordination Database.
+
+
+
+    Returns:
+
+        A JSON string containing an array of the latest 5 agent chat entries.
+
+    """
+
+    return _post("/agents/peek", {})
+
+
+@mcp.tool()
 def search_agents_db(query: str, limit: int = 20) -> str:
     """Searches the Agent Coordination Database for specific keywords.
 
