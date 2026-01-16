@@ -49,17 +49,11 @@ pub fn writeFileWithBackup(allocator: Allocator, path: []const u8, content: []co
     var backup_path_buffer: [4096]u8 = undefined;
     const backup_path = try std.fmt.bufPrint(&backup_path_buffer, "{s}.bak", .{path});
 
-    const file_exists = blk: {
-        filesystem.cwd().access(path, .{}) catch |err| switch (err) {
-            error.FileNotFound => break :blk false,
-            else => return err,
-        };
-        break :blk true;
+    const existing_content = readFile(allocator, path) catch |err| switch (err) {
+        ToolError.FileNotFound => null,
+        else => return err,
     };
-
-    if (file_exists) {
-        try filesystem.cwd().copyFile(path, filesystem.cwd(), backup_path, .{});
-    }
+    defer if (existing_content) |c| allocator.free(c);
 
     const extension = std.fs.path.extension(path);
     var final_content: []const u8 = content;
@@ -81,6 +75,14 @@ pub fn writeFileWithBackup(allocator: Allocator, path: []const u8, content: []co
     }
     defer if (header_buffer.len > 0) allocator.free(header_buffer);
 
+    // Only backup and write if content has changed
+    if (existing_content) |old| {
+        if (memory.eql(u8, old, final_content)) {
+            return; // No change, skip backup and write
+        }
+        try filesystem.cwd().copyFile(path, filesystem.cwd(), backup_path, .{});
+    }
+
     const temp_path = try std.fmt.bufPrint(&backup_path_buffer, "{s}.tmp", .{path});
     const temp_file = try filesystem.cwd().createFile(temp_path, .{});
     defer {
@@ -91,7 +93,7 @@ pub fn writeFileWithBackup(allocator: Allocator, path: []const u8, content: []co
     try temp_file.writeAll(final_content);
 
     filesystem.cwd().rename(temp_path, path) catch |err| {
-        if (file_exists) {
+        if (existing_content != null) {
             try filesystem.cwd().rename(backup_path, path);
         }
         return err;
