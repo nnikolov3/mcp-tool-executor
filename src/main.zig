@@ -1,3 +1,5 @@
+// DO EVERYTHING WITH LOVE, CARE, HONESTY, TRUTH, TRUST, KINDNESS, RELIABILITY, CONSISTENCY, DISCIPLINE, RESILIENCE, CRAFTSMANSHIP, HUMILITY, ALLIANCE, EXPLICITNESS
+
 // REF: ~/.gemini/GEMINI.md
 // DO EVERYTHING WITH LOVE, CARE, HONESTY, TRUTH, TRUST, KINDNESS, RELIABILITY, CONSISTENCY, DISCIPLINE, RESILIENCE, CRAFTSMANSHIP, HUMILITY, ALLIANCE, EXPLICITNESS
 
@@ -110,6 +112,8 @@ fn handleRequest(allocator: std.mem.Allocator, database: *db.Database, gemini_cl
         try handleGitCheckpoint(allocator, database, &request, body);
     } else if (std.mem.eql(u8, path, "/git/rollback")) {
         try handleGitRollback(allocator, &request, body);
+    } else if (std.mem.eql(u8, path, "/git/diff")) {
+        try handleGitDiff(allocator, &request, body);
     } else if (std.mem.eql(u8, path, "/git/checkpoints/list")) {
         try handleGitCheckpointsList(allocator, database, &request, body);
     } else {
@@ -548,7 +552,7 @@ fn handleGitCheckpoint(allocator: std.mem.Allocator, database: *db.Database, req
 
     // 2. Create checkpoint commit
     const timestamp = std.time.timestamp();
-    const commit_msg = try std.fmt.allocPrint(allocator, "CHECKPOINT: {d}", .{timestamp});
+    const commit_msg = try std.fmt.allocPrint(allocator, "CHECKPOINT: {d} | ALIAS: {s} | NOTES: {s}", .{ timestamp, payload_result.value.alias, payload_result.value.notes });
     defer allocator.free(commit_msg);
     
     const commit_arguments = [_][]const u8{ "git", "-C", repository_path, "commit", "-m", commit_msg };
@@ -598,6 +602,36 @@ fn handleGitRollback(allocator: std.mem.Allocator, request: *std.http.Server.Req
     }
 
     try sendResponse(request, .ok, "{ \"status\": \"success\" }");
+}
+
+fn handleGitDiff(allocator: std.mem.Allocator, request: *std.http.Server.Request, body: []const u8) !void {
+    const payload_result = std.json.parseFromSlice(struct { path: []const u8, base: []const u8, target: []const u8 }, allocator, body, .{}) catch {
+        try sendResponse(request, .bad_request, "{ \"error\": \"Invalid JSON payload\" }");
+        return;
+    };
+    defer payload_result.deinit();
+
+    const repository_path = payload_result.value.path;
+    const base = payload_result.value.base;
+    const target = payload_result.value.target;
+
+    const diff_arguments = [_][]const u8{ "git", "-C", repository_path, "diff", base, target };
+    const diff_result = try std.process.Child.run(.{ 
+        .allocator = allocator, 
+        .argv = &diff_arguments,
+        .max_output_bytes = 1024 * 1024 * 5, // Cap at 5MB
+    });
+    defer allocator.free(diff_result.stdout);
+    defer allocator.free(diff_result.stderr);
+
+    if (diff_result.term != .Exited or diff_result.term.Exited != 0) {
+        const error_message = try std.fmt.allocPrint(allocator, "{{ \"error\": \"Git diff failed: {s}\" }}", .{diff_result.stderr});
+        defer allocator.free(error_message);
+        try sendResponse(request, .internal_server_error, error_message);
+        return;
+    }
+
+    try sendResponse(request, .ok, diff_result.stdout);
 }
 
 fn handleGitCheckpointsList(allocator: std.mem.Allocator, database: *db.Database, request: *std.http.Server.Request, body: []const u8) !void {

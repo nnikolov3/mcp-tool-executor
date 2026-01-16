@@ -126,6 +126,34 @@ def list_checkpoints(path: str, limit: int = 10) -> str:
     return _post("/git/checkpoints/list", {"path": os.path.abspath(path), "limit": limit})
 
 
+@mcp.tool(description="Returns the git diff between two checkpoints. Useful for reviewing changes before rollback.")
+def agent_diff(path: str, base_checkpoint: str, target_checkpoint: str) -> str:
+    """Returns the git diff between two checkpoints.
+
+
+
+    Args:
+
+        path: The path to the git repository.
+
+        base_checkpoint: The hash of the starting point.
+
+        target_checkpoint: The hash of the ending point.
+
+
+
+    Returns:
+
+        The raw git diff output.
+
+    """
+
+    return _post(
+        "/git/diff",
+        {"path": os.path.abspath(path), "base": base_checkpoint, "target": target_checkpoint},
+    )
+
+
 @mcp.tool(description="Restores the repository to a previous checkpoint state. Use immediately if a build fails or logic becomes corrupted.")
 def agent_rollback(path: str, checkpoint_id: str) -> str:
     return _post(
