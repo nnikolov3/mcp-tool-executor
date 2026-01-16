@@ -3,7 +3,7 @@
 import os
 import json
 import urllib.request
-from typing import List, Optional, Dict, Any
+from typing import Dict, Any
 from fastmcp import FastMCP
 
 # Configuration
@@ -12,6 +12,7 @@ SERVER_URL = os.getenv("TOOL_EXECUTOR_URL", "http://localhost:9091")
 # Initialize MCP
 mcp = FastMCP("tool_executor")
 
+
 def _post(path: str, data: Dict[str, Any]) -> str:
     """Helper to send POST requests to the Zig Tool Executor service."""
     url = f"{SERVER_URL}{path}"
@@ -19,7 +20,7 @@ def _post(path: str, data: Dict[str, Any]) -> str:
         url,
         data=json.dumps(data).encode("utf-8"),
         headers={"Content-Type": "application/json"},
-        method="POST"
+        method="POST",
     )
     try:
         with urllib.request.urlopen(req) as response:
@@ -27,10 +28,9 @@ def _post(path: str, data: Dict[str, Any]) -> str:
     except Exception as e:
         return f"Error connecting to Tool Executor at {url}: {str(e)}"
 
+
 @mcp.tool()
-
 def clean_backups(path: str) -> str:
-
     """Recursively deletes all .bak files starting from a directory.
 
 
@@ -50,11 +50,8 @@ def clean_backups(path: str) -> str:
     return _post("/clean-backups", {"path": os.path.abspath(path)})
 
 
-
 @mcp.tool()
-
 def search_text(path: str, pattern: str) -> str:
-
     """Recursively searches for a text pattern in file contents.
 
 
@@ -76,11 +73,8 @@ def search_text(path: str, pattern: str) -> str:
     return _post("/search-text", {"path": os.path.abspath(path), "pattern": pattern})
 
 
-
 @mcp.tool()
-
 def find_files(path: str, pattern: str) -> str:
-
     """Recursively finds files matching a pattern.
 
 
@@ -102,11 +96,8 @@ def find_files(path: str, pattern: str) -> str:
     return _post("/find-files", {"path": os.path.abspath(path), "pattern": pattern})
 
 
-
 @mcp.tool()
-
 def read_directory(path: str) -> str:
-
     """Lists files and subdirectories within a directory.
 
 
@@ -126,11 +117,8 @@ def read_directory(path: str) -> str:
     return _post("/read-directory", {"path": os.path.abspath(path)})
 
 
-
 @mcp.tool()
-
 def read_file(path: str) -> str:
-
     """Reads the content of a file from the workspace.
 
 
@@ -150,18 +138,15 @@ def read_file(path: str) -> str:
     return _post("/read", {"path": os.path.abspath(path)})
 
 
-
 @mcp.tool()
-
 def write_file(path: str, content: str) -> str:
-
     """Writes content to a file, ensuring mandatory headers are applied.
 
 
 
     This tool automatically adds the project's mandatory 14-value header
 
-    to .zig, .go, .js, and .ts files if it's missing. It also creates a 
+    to .zig, .go, .js, and .ts files if it's missing. It also creates a
 
     backup (.bak) before writing.
 
@@ -184,11 +169,8 @@ def write_file(path: str, content: str) -> str:
     return _post("/write", {"path": os.path.abspath(path), "content": content})
 
 
-
 @mcp.tool()
-
 def replace_whole_word(path: str, old_word: str, new_word: str) -> str:
-
     """Replaces a whole word in a file, respecting alphanumeric boundaries.
 
 
@@ -213,14 +195,14 @@ def replace_whole_word(path: str, old_word: str, new_word: str) -> str:
 
     """
 
-    return _post("/replace-word", {"path": os.path.abspath(path), "old": old_word, "new": new_word})
-
+    return _post(
+        "/replace-word",
+        {"path": os.path.abspath(path), "old": old_word, "new": new_word},
+    )
 
 
 @mcp.tool()
-
 def replace_text(path: str, old_text: str, new_text: str) -> str:
-
     """Performs global text replacement in a file.
 
 
@@ -241,14 +223,16 @@ def replace_text(path: str, old_text: str, new_text: str) -> str:
 
     """
 
-    return _post("/replace-text", {"path": os.path.abspath(path), "old": old_text, "new": new_text})
-
+    return _post(
+        "/replace-text",
+        {"path": os.path.abspath(path), "old": old_text, "new": new_text},
+    )
 
 
 @mcp.tool()
-
-def update_agents_db(alias: str, intent: str, status: str, semaphore: str = "", notes: str = "") -> str:
-
+def update_agents_db(
+    alias: str, intent: str, status: str, semaphore: str = "", notes: str = ""
+) -> str:
     """Updates the shared Agent Coordination Database with a new entry.
 
 
@@ -280,27 +264,18 @@ def update_agents_db(alias: str, intent: str, status: str, semaphore: str = "", 
     """
 
     payload = {
-
         "alias": alias,
-
         "intent": intent,
-
         "status": status,
-
         "semaphore": semaphore,
-
-        "notes": notes
-
+        "notes": notes,
     }
 
     return _post("/agents/update", payload)
 
 
-
 @mcp.tool()
-
 def read_agents_db(limit: int = 20) -> str:
-
     """Reads the most recent entries from the Agent Coordination Database.
 
 
@@ -320,11 +295,8 @@ def read_agents_db(limit: int = 20) -> str:
     return _post("/agents/read", {"limit": limit})
 
 
-
 @mcp.tool()
-
 def search_agents_db(query: str, limit: int = 20) -> str:
-
     """Searches the Agent Coordination Database for specific keywords.
 
 
@@ -350,11 +322,8 @@ def search_agents_db(query: str, limit: int = 20) -> str:
     return _post("/agents/search", {"query": query, "limit": limit})
 
 
-
 @mcp.tool()
-
 def agent_commit(path: str, context: str) -> str:
-
     """Generates a high-integrity commit message and applies it.
 
 
@@ -384,11 +353,8 @@ def agent_commit(path: str, context: str) -> str:
     return _post("/git/commit", {"path": os.path.abspath(path), "context": context})
 
 
-
 @mcp.tool()
-
 def agent_push(path: str) -> str:
-
     """Pushes local commits to the remote repository.
 
 
@@ -407,5 +373,7 @@ def agent_push(path: str) -> str:
 
     return _post("/git/push", {"path": os.path.abspath(path)})
 
+
 if __name__ == "__main__":
     mcp.run()
+
