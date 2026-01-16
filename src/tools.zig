@@ -15,6 +15,23 @@ pub const ToolError = error{
     InvalidWord,
 };
 
+pub fn shouldIgnore(name: []const u8) bool {
+    const ignored_patterns = [_][]const u8{
+        ".git",
+        "node_modules",
+        ".zig-cache",
+        "zig-out",
+        "__pycache__",
+        ".venv",
+        ".mypy_cache",
+        ".ruff_cache",
+    };
+    for (ignored_patterns) |pattern| {
+        if (memory.eql(u8, name, pattern)) return true;
+    }
+    return false;
+}
+
 pub fn readFile(allocator: Allocator, path: []const u8) ![]const u8 {
     const file = filesystem.openFileAbsolute(path, .{}) catch |err| switch (err) {
         error.FileNotFound => return ToolError.FileNotFound,
@@ -63,7 +80,6 @@ pub fn writeFileWithBackup(allocator: Allocator, path: []const u8, content: []co
         final_content = try std.mem.concat(allocator, u8, &.{ header_buffer, content });
     }
     defer if (header_buffer.len > 0) allocator.free(header_buffer);
-
 
     const temp_path = try std.fmt.bufPrint(&backup_path_buffer, "{s}.tmp", .{path});
     const temp_file = try filesystem.cwd().createFile(temp_path, .{});
@@ -134,6 +150,7 @@ pub fn readCurrentDirectory(allocator: Allocator, path: []const u8) ![]const []c
 
     var it = dir.iterate();
     while (try it.next()) |entry| {
+        if (shouldIgnore(entry.name)) continue;
         try entries.append(allocator, try allocator.dupe(u8, entry.name));
     }
     return try entries.toOwnedSlice(allocator);
@@ -153,6 +170,7 @@ pub fn findFiles(allocator: Allocator, path: []const u8, pattern: []const u8) ![
     defer walker.deinit();
 
     while (try walker.next()) |entry| {
+        if (shouldIgnore(entry.basename)) continue;
         if (entry.kind == .file) {
             if (memory.indexOf(u8, entry.basename, pattern) != null) {
                 try results.append(allocator, try allocator.dupe(u8, entry.path));
@@ -176,6 +194,7 @@ pub fn searchText(allocator: Allocator, path: []const u8, pattern: []const u8) !
     defer walker.deinit();
 
     while (try walker.next()) |entry| {
+        if (shouldIgnore(entry.basename)) continue;
         if (entry.kind == .file) {
             const file = entry.dir.openFile(entry.basename, .{}) catch continue;
             defer file.close();
@@ -202,6 +221,7 @@ pub fn cleanBackups(allocator: Allocator, path: []const u8) !usize {
 
     var count: usize = 0;
     while (try walker.next()) |entry| {
+        // We don't ignore directories here because we want to clean backups everywhere
         if (entry.kind == .file and memory.endsWith(u8, entry.basename, ".bak")) {
             entry.dir.deleteFile(entry.basename) catch continue;
             count += 1;
